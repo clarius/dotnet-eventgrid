@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en-US">
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,maximum-scale=2">
+    <link rel="stylesheet" type="text/css" media="screen" href="/dotnet-eventgrid/assets/css/style.css?v=316d3647504d581ad80a2c0114dbcfa224500c46">
+
+<!-- Begin Jekyll SEO tag v2.6.1 -->
+<title>dotnet-eventgrid | Azure Function app and accompanying dotnet global tool to monitor Azure EventGrid streams in real-time.</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="dotnet-eventgrid" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Azure Function app and accompanying dotnet global tool to monitor Azure EventGrid streams in real-time." />
+<meta property="og:description" content="Azure Function app and accompanying dotnet global tool to monitor Azure EventGrid streams in real-time." />
+<meta property="og:site_name" content="dotnet-eventgrid" />
+<script type="application/ld+json">
+{"headline":"dotnet-eventgrid","@type":"WebSite","description":"Azure Function app and accompanying dotnet global tool to monitor Azure EventGrid streams in real-time.","url":"/dotnet-eventgrid/","name":"dotnet-eventgrid","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/devlooped/dotnet-eventgrid">View on GitHub</a>
+
+          <h1 id="project_title">dotnet-eventgrid</h1>
+          <h2 id="project_tagline">Azure Function app and accompanying dotnet global tool to monitor Azure EventGrid streams in real-time.</h2>
+
+          
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h1 id="-dotnet-eventgrid"><img src="https://raw.githubusercontent.com/devlooped/dotnet-eventgrid/main/img/icon-32.png" alt="Icon" /> dotnet-eventgrid</h1>
+
+<p>An Azure Function app with an EventGrid-trigger function that forwards events 
+to an Azure SignalR service, and an accompanying <code class="language-plaintext highlighter-rouge">dotnet</code> global tool to 
+connect to it and receive the streaming events in real-time.</p>
+
+<p><img src="https://raw.githubusercontent.com/devlooped/dotnet-eventgrid/main/img/eventgrid.gif" alt="EventGrid tool in action" /></p>
+
+<h2 id="why">Why</h2>
+
+<p>I find the <a href="https://github.com/Azure-Samples/azure-event-grid-viewer">Azure EventGrid Viewer</a> 
+quite lacking and stagnating, it’s <a href="https://docs.microsoft.com/en-us/samples/azure-samples/azure-event-grid-viewer/azure-event-grid-viewer/">just a sample after all</a>.
+Also, I’m much more into <a href="https://docs.microsoft.com/en-us/dotnet/core/tools/global-tools">dotnet global tools</a> 
+than web pages, having created a bunch of others like <a href="https://github.com/devlooped/dotnet-vs">dotnet-vs</a>, 
+<a href="https://github.com/devlooped/guit">guit</a>, <a href="https://github.com/devlooped/dotnet-file">dotnet-file</a> and 
+<a href="https://github.com/devlooped/dotnet-config">dotnet-config</a> ¯_(ツ)_/¯</p>
+
+<h2 id="install">Install</h2>
+
+<p>Now you can install the dotnet tool that connects to your cloud infrastructure:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dotnet tool install -g dotnet-eventgrid
+</code></pre></div></div>
+
+<p>Update:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dotnet tool update -g dotnet-eventgrid
+</code></pre></div></div>
+
+<!-- #tool -->
+<h2 id="usage">Usage</h2>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Usage: eventgrid [url] -[property]* +[property[=minimatch]]*
+      +all                    Render all properties
+      -property               Exclude a property
+      +property[=minimatch]   Include a property, optionally filtering
+                              with the given the minimatch expression.
+      jq=expression           When rendering event data containing JSON,
+                              apply the given JQ expression. Learn more at
+                              https://stedolan.github.io/jq/
+
+Examples:
+- Include all event properties, for topic ending in 'System'
+      eventgrid https://mygrid.com +all +topic=**/System
+
+- Exclude data property and filter for specific event types
+      eventgrid https://mygrid.com -data +eventType=Login
+
+- Filter using synthetized path property '{domain}/{topic}/{subject}/{eventType}'
+      eventgrid https://mygrid.com +path=MyApp/**/Login
+
+- Filter using synthetized path property for a specific event and user (subject)
+      eventgrid https://mygrid.com +path=MyApp/*/1bQUI/Login
+
+- Render sponsorship action, sponsorable login and sponsor login from GH webhook JSON event data:
+      eventgrid https://mygrid.com jq="{ action: .action, sponsorable: .sponsorship.sponsorable.login, sponsor: .sponsorship.sponsor.login }"
+</code></pre></div></div>
+
+<p><em>eventgrid</em> also supports <a href="https://dotnetconfig.org">.netconfig</a> for configuring 
+arguments:</p>
+
+<pre><code class="language-gitconfig">[eventgrid]
+    url = https://events.mygrid.com
+
+    # filters that events must pass to be rendered
+    filter = path=MyApp/**/Login
+    filter = eventType=*System*
+
+    # properties to include in the event rendering
+    include = EventType
+    include = Subject
+
+    # properties to exclude from event rendering
+    exclude = data
+
+    # apply jq when rendering JSON data payloads
+    jq = "{ action: .action, sponsor: .sponsorship.sponsor.login }"
+</code></pre>
+
+<p>The <code class="language-plaintext highlighter-rouge">url</code> is the address of your deployed function app, which can optionally 
+have an <code class="language-plaintext highlighter-rouge">?key=[access-key]</code> query string with the same value specified in the 
+Function App configuration settings with the name <code class="language-plaintext highlighter-rouge">AccessKey</code>. If present, it 
+will be used as a shared secret to authorize the SignalR stream connection. 
+It’s passed as the <code class="language-plaintext highlighter-rouge">X-Authorization</code> custom header and checked by the function 
+during SignalR connection negotiation.</p>
+
+<p>Keep in mind that the built-in EventGrid format for <code class="language-plaintext highlighter-rouge">topic</code> is rather unwieldy: 
+<code class="language-plaintext highlighter-rouge">/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.EventGrid/domains/{domainName}/topics/{topicName}</code>. 
+For this reason, we also provide a synthetized <code class="language-plaintext highlighter-rouge">path</code> property with the much 
+simpler format <code class="language-plaintext highlighter-rouge">{domain}/{topic}/{subject}/{eventType}</code>, which makes filtering 
+with the <a href="https://github.com/isaacs/minimatch">minimatch</a> format much more 
+convenient.</p>
+
+<!-- #tool -->
+
+<p>If you already know how to deploy an Azure SignalR service, you can safely 
+skip the following section.</p>
+
+<h2 id="deploy">Deploy</h2>
+
+<p>The dotnet global tool <code class="language-plaintext highlighter-rouge">eventgrid</code> connects to a SignalR service that broadcasts events with a 
+specific format (basically, just JSON-serialized <a href="https://docs.microsoft.com/en-us/dotnet/api/microsoft.azure.eventgrid.models.eventgridevent?view=azure-dotnet">EventGridEvent</a> 
+objects). In order to receive those, we need to connect an EventGrid subscription (thorugh an 
+Azure function) to SignalR. Since the resources, cost and privacy issues involved are non-trivial, 
+we don’t provide a ready-made service you can just connect your EventGrid events to.</p>
+
+<p>Instructions to deploy the cloud pieces on your own Azure subscription:</p>
+
+<ol>
+  <li>
+    <p>The first step to getting your own event grid events routed to the tool is to 
+set up a <a href="https://portal.azure.com/#create/Microsoft.SignalRGalleryPackage">Azure SignalR service</a> if 
+you don’t have one already. There is a <a href="https://azure.microsoft.com/en-us/pricing/details/signalr-service/">free tier</a> 
+that allows 20 simulaneous connections and up to 20k messages per day.
+Once created, open the Settings &gt; Keys pane and copy the <code class="language-plaintext highlighter-rouge">Connection String</code>. 
+Make sure you pick <code class="language-plaintext highlighter-rouge">Serverless</code> for the service mode.</p>
+
+    <blockquote>
+      <p><img src="https://raw.githubusercontent.com/devlooped/dotnet-eventgrid/main/img/signalr.png" alt="SignalR Connection String" /></p>
+    </blockquote>
+  </li>
+  <li>
+    <p>Next comes the <a href="https://portal.azure.com/#create/Microsoft.FunctionApp">Function App</a>. Create 
+an empty one, using .NET Core 3.1. The simplest way to deploy the code to it is to select the 
+<code class="language-plaintext highlighter-rouge">Deployment Center</code> pane, select <code class="language-plaintext highlighter-rouge">GitHub</code> for source control (point it to your fork of this repo) 
+and <code class="language-plaintext highlighter-rouge">App Service build service</code> for the build provider.</p>
+
+    <blockquote>
+      <p><img src="https://raw.githubusercontent.com/devlooped/dotnet-eventgrid/main/img/github.png" alt="GitHub source control" /></p>
+    </blockquote>
+
+    <blockquote>
+      <p><img src="https://raw.githubusercontent.com/devlooped/dotnet-eventgrid/main/img/kudu.png" alt="App Service build service" /></p>
+    </blockquote>
+  </li>
+  <li>Now we need to configure a couple application settings in the function app:
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">AzureSignalRConnectionString</code>: set it to the value copied in step 2.</li>
+      <li>Optionally, create an <code class="language-plaintext highlighter-rouge">AccessKey</code> value with an arbitrary string to use as a shared 
+secret to authorize connections from the client. You will need to append that key to 
+the url passed to the <code class="language-plaintext highlighter-rouge">eventgrid</code> tool, like <code class="language-plaintext highlighter-rouge">eventgrid https://myfunc.azurewebsites.net/?key=...</code></li>
+    </ul>
+
+    <blockquote>
+      <p><img src="https://raw.githubusercontent.com/devlooped/dotnet-eventgrid/main/img/configuration.png" alt="Function App configuration" /></p>
+    </blockquote>
+  </li>
+  <li>
+    <p>The final step is to start sending events to the function app just created. 
+Go to all the relevant EventGrid services you have (or <a href="https://portal.azure.com/#create/Microsoft.EventGridDomain">create a new one</a>) 
+and set up the subscriptions to push as much or as little as you need to visualize 
+on the tool. Keep in mind that the tool can also do filtering on the client side, 
+so that you don’t need to constantly update the subscriptions. During development, 
+it can be convenient to just create a single global subscription with no filters 
+and just filter on the client. Beware of the SignalR service limits for the tier 
+you have selected, though.</p>
+
+    <p>You just need to create a new Event Subscription and select the <code class="language-plaintext highlighter-rouge">Azure Function</code> 
+endpoint type, and point it to the deployed function app from step 3.</p>
+
+    <blockquote>
+      <p><img src="https://raw.githubusercontent.com/devlooped/dotnet-eventgrid/main/img/eventgrid.png" alt="New Event Subscription" /></p>
+    </blockquote>
+
+    <p>The function will be named <code class="language-plaintext highlighter-rouge">publish</code> once you select the right subscription, 
+resource group and function app</p>
+
+    <blockquote>
+      <p><img src="https://raw.githubusercontent.com/devlooped/dotnet-eventgrid/main/img/subscription.png" alt="Subscription Endpoint" /></p>
+    </blockquote>
+  </li>
+</ol>
+
+<h3 id="local-development">Local Development</h3>
+
+<p>When running the function app locally, use <a href="https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets?view=aspnetcore-7.0&amp;tabs=windows#set-a-secret">dotnet user-secrets</a> 
+to set the <code class="language-plaintext highlighter-rouge">AzureSignalRConnectionString</code> and (optional) <code class="language-plaintext highlighter-rouge">AccessKey</code> values.</p>
+
+<h2 id="testing-events">Testing events</h2>
+
+<p>Pushing test events to EventGrid is quite simple. Provided you have a package 
+reference to <code class="language-plaintext highlighter-rouge">Microsoft.Azure.EventGrid</code>, you can use the following snippet 
+of C# (for example in the most excelent <a href="https://www.linqpad.net/">LINQPad</a> tool, 
+or in a simple top-level C# 9 program) to push some events:</p>
+
+<div class="language-csharp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">var</span> <span class="n">domain</span> <span class="p">=</span> <span class="s">"YOUR_EVENT_GRID_DOMAIN_ENDPOINT_HOSTNAME"</span><span class="p">;</span>                <span class="c1">// From the Overview pane</span>
+<span class="kt">var</span> <span class="n">credentials</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">TopicCredentials</span><span class="p">(</span><span class="s">"YOUR_EVENT_GRID_ACCESS_KEY"</span><span class="p">);</span>   <span class="c1">// From Access keys pane</span>
+
+<span class="kt">var</span> <span class="n">events</span> <span class="p">=</span> <span class="k">new</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">EventGridEvent</span><span class="p">&gt;</span>
+<span class="p">{</span>
+    <span class="k">new</span> <span class="nf">EventGridEvent</span><span class="p">(</span>
+        <span class="n">id</span><span class="p">:</span> <span class="n">Guid</span><span class="p">.</span><span class="nf">NewGuid</span><span class="p">().</span><span class="nf">ToString</span><span class="p">(</span><span class="s">"n"</span><span class="p">),</span> 
+        <span class="n">subject</span><span class="p">:</span> <span class="s">"1bQUI"</span><span class="p">,</span> 
+        <span class="n">data</span><span class="p">:</span> <span class="n">JsonConvert</span><span class="p">.</span><span class="nf">SerializeObject</span><span class="p">(</span><span class="k">new</span> <span class="p">{</span> <span class="n">FirstName</span> <span class="p">=</span> <span class="s">"Daniel"</span><span class="p">,</span> <span class="n">LastName</span> <span class="p">=</span> <span class="s">"Cazzulino"</span> <span class="p">}),</span> 
+        <span class="n">eventType</span><span class="p">:</span> <span class="s">"Login"</span><span class="p">,</span> 
+        <span class="n">eventTime</span><span class="p">:</span> <span class="n">DateTime</span><span class="p">.</span><span class="n">UtcNow</span><span class="p">,</span> 
+        <span class="n">dataVersion</span><span class="p">:</span> <span class="s">"1.0"</span><span class="p">,</span> 
+        <span class="n">topic</span><span class="p">:</span> <span class="s">"Devlooped.MyApp"</span><span class="p">),</span>
+    <span class="k">new</span> <span class="nf">EventGridEvent</span><span class="p">(</span>
+        <span class="n">id</span><span class="p">:</span> <span class="n">Guid</span><span class="p">.</span><span class="nf">NewGuid</span><span class="p">().</span><span class="nf">ToString</span><span class="p">(</span><span class="s">"n"</span><span class="p">),</span> 
+        <span class="n">subject</span><span class="p">:</span> <span class="s">"1XKDw"</span><span class="p">,</span> 
+        <span class="n">data</span><span class="p">:</span> <span class="n">JsonConvert</span><span class="p">.</span><span class="nf">SerializeObject</span><span class="p">(</span><span class="k">new</span> <span class="p">{</span> <span class="n">FirstName</span> <span class="p">=</span> <span class="s">"Pablo"</span><span class="p">,</span> <span class="n">LastName</span> <span class="p">=</span> <span class="s">"Galiano"</span> <span class="p">}),</span> 
+        <span class="n">eventType</span><span class="p">:</span> <span class="s">"LoginFailed"</span><span class="p">,</span> 
+        <span class="n">eventTime</span><span class="p">:</span> <span class="n">DateTime</span><span class="p">.</span><span class="n">UtcNow</span><span class="p">,</span> 
+        <span class="n">dataVersion</span><span class="p">:</span> <span class="s">"1.0"</span><span class="p">,</span> 
+        <span class="n">topic</span><span class="p">:</span> <span class="s">"Devlooped.MyApp"</span><span class="p">),</span>
+    <span class="c1">// ...</span>
+<span class="p">};</span>
+
+<span class="k">using</span> <span class="p">(</span><span class="kt">var</span> <span class="n">client</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">EventGridClient</span><span class="p">(</span><span class="n">credentials</span><span class="p">))</span>
+<span class="p">{</span>
+    <span class="k">foreach</span> <span class="p">(</span><span class="kt">var</span> <span class="n">e</span> <span class="k">in</span> <span class="n">events</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="k">await</span> <span class="n">client</span><span class="p">.</span><span class="nf">PublishEventsAsync</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="k">new</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">EventGridEvent</span><span class="p">&gt;</span> <span class="p">{</span> <span class="n">e</span> <span class="p">});</span>
+        <span class="n">Thread</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="m">1000</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>The above was pretty much what we used to create the animated gif at the top.</p>
+
+<!-- include https://github.com/devlooped/sponsors/raw/main/footer.md -->
+<h1 id="sponsors">Sponsors</h1>
+
+<!-- sponsors.md -->
+<p><a href="https://github.com/clarius"><img src="https://raw.githubusercontent.com/devlooped/sponsors/main/.github/avatars/clarius.png" alt="Clarius Org" title="Clarius Org" /></a>
+<a href="https://github.com/augustoproiete"><img src="https://raw.githubusercontent.com/devlooped/sponsors/main/.github/avatars/augustoproiete.png" alt="C. Augusto Proiete" title="C. Augusto Proiete" /></a>
+<a href="https://github.com/KirillOsenkov"><img src="https://raw.githubusercontent.com/devlooped/sponsors/main/.github/avatars/KirillOsenkov.png" alt="Kirill Osenkov" title="Kirill Osenkov" /></a>
+<a href="https://github.com/MFB-Technologies-Inc"><img src="https://raw.githubusercontent.com/devlooped/sponsors/main/.github/avatars/MFB-Technologies-Inc.png" alt="MFB Technologies, Inc." title="MFB Technologies, Inc." /></a>
+<a href="https://github.com/sandrock"><img src="https://raw.githubusercontent.com/devlooped/sponsors/main/.github/avatars/sandrock.png" alt="SandRock" title="SandRock" /></a>
+<a href="https://github.com/agocke"><img src="https://raw.githubusercontent.com/devlooped/sponsors/main/.github/avatars/agocke.png" alt="Andy Gocke" title="Andy Gocke" /></a>
+<a href="https://github.com/decriptor"><img src="https://raw.githubusercontent.com/devlooped/sponsors/main/.github/avatars/decriptor.png" alt="Stephen Shaw" title="Stephen Shaw" /></a>
+<a href="https://github.com/torutek-gh"><img src="https://raw.githubusercontent.com/devlooped/sponsors/main/.github/avatars/torutek-gh.png" alt="Torutek" title="Torutek" /></a></p>
+
+<!-- sponsors.md -->
+
+<p><a href="https://github.com/sponsors/devlooped"><img src="https://raw.githubusercontent.com/devlooped/sponsors/main/sponsor.png" alt="Sponsor this project" title="Sponsor this project" /></a>
+ </p>
+
+<p><a href="https://github.com/sponsors">Learn more about GitHub Sponsors</a></p>
+
+<!-- https://github.com/devlooped/sponsors/raw/main/footer.md -->
+
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        
+        <p class="copyright">dotnet-eventgrid maintained by <a href="https://github.com/devlooped">devlooped</a></p>
+        
+        <p>Published with <a href="https://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+  </body>
+</html>
